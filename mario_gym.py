@@ -38,11 +38,10 @@ def run_simulation(args, map_actions, env_actions, pixel2baldoza):
 
             n_lives = info["life"]
             action_idx = 0
-            n_baldoza = pixel2baldoza(info["x_pos"])
+            n_baldoza = pixel2baldoza(info["x_pos"], info["status"])
             try:
                 action_idx = map_actions[n_baldoza]
             except Exception as e:
-                print(f"Error, no hay acciones definidas para la baldoza {n_baldoza}")
                 results["info"]["status"] = "error"
                 break
 

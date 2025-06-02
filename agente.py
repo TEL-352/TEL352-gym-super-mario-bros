@@ -1,8 +1,8 @@
+import os
 from typing import List
 
-from nes_py.wrappers import JoypadSpace
-import gym_super_mario_bros
-import numpy as np
+import cloudpickle
+import datetime
 
 from acciones import make_environment_actions
 from mario_gym import run_simulation
@@ -46,6 +46,66 @@ class SuperMarioAgenteTEL:
         No modificar este método
         """
         return make_environment_actions()
+
+    def save_simulation_results(self):
+        """
+        Función para guardar una copia de las acciones y resultados históricos
+        y también el mejor map_actions generado por su agente para luego ser evaluado
+        """
+        time_now = datetime.datetime.now()
+        time_now = time_now.strftime("%Y_%m_%d_%H_%M_%S")
+
+        backup_data = {
+            "historic_actions": self.historic_map_actions,
+            "historic_results": self.historic_results,
+            "best_actions": self.self.best_map_actions,
+        }
+
+        backup_file_name = f"{time_now}_simulation_results.pkl"
+        outdir = "outputs/"
+        os.makedirs(outdir, exist_ok=True)
+
+        with open(f"{outdir}/{backup_file_name}", mode="wb") as file:
+            cloudpickle.dump(backup_data, file)
+
+    def run_simulation(self, map_actions):
+        """
+        Wrapper para que la clase tenga acceso a la funcón definida en mario_gym.py
+        No modificar ni la función original ni este método
+
+        Ejecuta una simulación utilizando
+        el mapeo de acciones generado por su agente
+        El único objetivo de esta función es ejecutar
+        las acciones generadas por su agente en el nivel 1 de Mario
+        """
+        return run_simulation(
+            self.args,
+            map_actions,
+            self.make_environment_actions(),
+            self.conversion_pixel_baldoza,
+        )
+
+    def make_next_actions(self):
+        """
+        Función para generar la lista de acciones a utilizar en la iteración actual
+
+        Esta (o estas) acción se debe generar como resultado de la implementación
+        de la heurística que se le asignó a cada estudiante
+
+        La (o las) lista de acciones generada debe cumplir con lo siguiente:
+            Estructura que tiene como índice el número de la baldoza
+            y como valor para esa baldoza almacenar el índice de la acción a realizar
+            El número de la baldoza se obtiene según su implementación de pixel2cell.py
+            El índice de la acción se obtiene según su implementación de acciones.py
+        """
+
+        map_actions = [
+            0,
+            0,
+            1,
+        ]
+
+        return map_actions
 
     def make_results(self, map_actions):
         """
@@ -96,6 +156,16 @@ class SuperMarioAgenteTEL:
 
         return results
 
+    def update_best_map_action(self, map_actions, results):
+        """
+        En esta función debe definir su criterio de selección para actualizar
+        la mejor solución (o las mejores) soluciones encontradas
+        """
+        results_eval = self.eval_actions(results)
+
+        if results_eval == 0:
+            self.best_map_actions = map_actions
+
     def eval_actions(self, results):
         """
         En esta función debe definir su función de evaluación para su agente
@@ -110,15 +180,14 @@ class SuperMarioAgenteTEL:
 
         return 0
 
-    def update_best_map_action(self, map_actions, results):
+    def criterio_de_termino(self):
         """
-        En esta función debe definir su criterio de selección para actualizar
-        la mejor solución (o las mejores) soluciones encontradas
-        """
-        results_eval = self.eval_actions(results)
+        En esta función debe definir su criterio de término.
 
-        if results_eval == 0:
-            self.best_map_actions = map_actions
+        Sientase en libertad de agregar todos los parámetros y las salidas que necesite 
+        """
+
+        return True
 
     def train(self):
         """
@@ -143,43 +212,7 @@ class SuperMarioAgenteTEL:
 
             self.update_best_map_action(new_map_actions, new_results)
 
-            print("")
-
-    def make_next_actions(self):
-        """
-        Función para generar la lista de acciones a utilizar en la iteración actual
-
-        Esta (o estas) acción se debe generar como resultado de la implementación
-        de la heurística que se le asignó a cada estudiante
-
-        La (o las) lista de acciones generada debe cumplir con lo siguiente:
-            Estructura que tiene como índice el número de la baldoza
-            y como valor para esa baldoza almacenar el índice de la acción a realizar
-            El número de la baldoza se obtiene según su implementación de pixel2cell.py
-            El índice de la acción se obtiene según su implementación de acciones.py
-        """
-
-        map_actions = [
-            0,
-            0,
-            1,
-        ]
-
-        return map_actions
-
-    def run_simulation(self, map_actions):
-        """
-        Wrapper para que la clase tenga acceso a la funcón definida en mario_gym.py
-        No modificar ni la función original ni este método
-
-        Ejecuta una simulación utilizando
-        el mapeo de acciones generado por su agente
-        El único objetivo de esta función es ejecutar
-        las acciones generadas por su agente en el nivel 1 de Mario
-        """
-        return run_simulation(
-            self.args,
-            map_actions,
-            self.make_environment_actions,
-            self.conversion_pixel_baldoza,
-        )
+            if self.criterio_de_termino():
+                break
+        
+        self.save_simulation_results()

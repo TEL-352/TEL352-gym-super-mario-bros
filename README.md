@@ -44,3 +44,11 @@ El programa se debe ejecutar por medio del archivo `main.py`, para lo cual se pu
 Línea de comando para ejecutar el programa:
 
 - `python main.py --n_frames 10000 --n_training_steps 100`
+
+## Evaluación del agente:
+
+Una vez finalizada la ejecución de su agente, debería aparecer un nuevo directorio en su repositorio con el nombre `outputs`. Este directorio contiene los resultados de la simulación (acciones y resultados históricos junto a la mejor solución encontrada).
+
+Para evaluar su agente se debe ejecutar el archivo `eval.py`. Este archivo puede recibir como argumentos el flag `--render` para renderizar el juego ejecutando sus acciones y `--date YYYY_MM_DD_HH_mm_ss` para elegir la fecha que de la solución que se quiere evaluar. Por ejemplo, si al ejecutar el archivo `main.py` se genera dentro de `outputs` el archivo `2025_06_01_10_15_17_simulation_results.pkl`, podemos evaluar esta solución ejecutando la siguiente línea de comando:
+
+- `python eval.py --render --date 2025_06_01_10_15_17`
