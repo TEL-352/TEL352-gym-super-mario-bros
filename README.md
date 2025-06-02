@@ -23,9 +23,14 @@ Repositorio base para el proyecto de la asignatura TEL352
 El repositorio consta de los siguientes archivos
 
 - `acciones.py`: Contiene las combinaciones de acciones que considerará su algoritmo para generar la solución final (contiene todas las posibles combinaciones de acciones válidas para realizar en cualquier etapa de la simulación)
-- `main.py`: Contiene la lógica 
+- `agente.py`: Contiene el código principal para su agente inteligente. Este se compone de una clase con todos los métodos necesarios para implementar su heurística.
+- `eval_setup.py`: Configuración para evaluar la solución de su agente. No se debe modificar.
+- `eval.py`: Código para evaluar la solución de su agente. No se debe modificar.
+- `main.py`: Contiene la lógica mínima necesaria para entrenar a su agente. No debería ser necesario modificarlo.
+- `mario_gym.py`: Contiene el código necesario para que su agente pueda interactuar con el framework de Super Mario GYM. No se debe modificar.
+- `pixel2cell.py`: Contiene la conversión que debe implementar para traducir la posición en pixeles de Mario a baldozas. Leer `REPRESENTACION.md` para más información.
+- `requirements.txt`: Contiene las librerías que debe instalar en su entorno de python 3.8 para poder ejecutar el framework.
 - `setup.py`: Contiene la configuración de hiper-parámetros necesarios para la ejecución del programa, como el número de steps a realizar en cada etapa, entre otros (modificar a conveniencia)
-- `todo`...
 
 ---
 
