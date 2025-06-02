@@ -1,8 +1,6 @@
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
 
-from agente import SuperMarioAgenteTEL
-
 
 def run_simulation(args, map_actions, env_actions, pixel2baldoza):
         """

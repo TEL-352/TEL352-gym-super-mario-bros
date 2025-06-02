@@ -12,7 +12,7 @@ from pixel2cell import conversion_pixel_baldoza
 class SuperMarioAgenteTEL:
     def __init__(self, args):
         # Recibe los argumentos enviados por la línea de comando
-        args = args
+        self.args = args
 
         # Define las acciones váldias para el entorno según lo definido en acciones.py
         self.actions = self.make_environment_actions()
@@ -121,7 +121,7 @@ class SuperMarioAgenteTEL:
             El número de la baldoza se obtiene según su implementación de pixel2cell.py
             El índice de la acción se obtiene según su implementación de acciones.py
         """
-        results = self.run_simulation(self.args, map_actions)
+        results = self.run_simulation(map_actions)
 
         """
         results es un diccionario con las siguientes llaves:
