@@ -1,26 +1,21 @@
-from nes_py.wrappers import JoypadSpace
-import gym_super_mario_bros
+import sys
+import random
+
+import numpy as np
 
 from agente import SuperMarioAgenteTEL
+from setup import main_parse_args
 
-agente_tel = SuperMarioAgenteTEL()
+random.seed(10)
+np.random.seed(0)
 
-env = gym_super_mario_bros.make('SuperMarioBros-v0')
-env = JoypadSpace(env, agente_tel.get_actions())
 
-done = True
-for step in range(agente_tel.get_n_steps()):
-    if done:
-        state = env.reset()
+def main(args):
+    agente_tel = SuperMarioAgenteTEL(args)
+    agente_tel.train()
     
-    if step == 0:
-        state, reward, done, info = env.step(0)
+    return
 
-    else:
-        state, reward, done, info = env.step(agente_tel.get_next_action(state, reward, info))
-
-    if agente_tel.get_render():
-        env.render()
-    # break
-
-env.close()
+if __name__ == "__main__":
+    args = main_parse_args(sys.argv[1:])
+    main(args)
