@@ -21,6 +21,18 @@ class SuperMarioAgenteTEL:
         # Se debe actualizar con el mejor mapeo de acciones encontrado en cada iteración
         # puede no ser un diccionario, ajustar a conveniencia (ver REPRESENTACION.md)
         self.best_map_actions = {}
+        self.best_map_actions_results = {
+            "coins": 0,
+            "flag_get": False,
+            "life": 2,
+            "score": 0,
+            "stage": 1,
+            "status": "dead",
+            "time": 400,
+            "world": 1,
+            "x_pos": 1,
+            "y_pos": 79
+        }
 
         # Almacena el histórico del mapeo de acciones y de sus resultados
         # Se debe actualizar en cada ejecución para ir llevando un registro histórico
@@ -58,7 +70,8 @@ class SuperMarioAgenteTEL:
         backup_data = {
             "historic_actions": self.historic_map_actions,
             "historic_results": self.historic_results,
-            "best_actions": self.self.best_map_actions,
+            "best_actions": self.best_map_actions,
+            "best_results": self.best_map_actions_results,
         }
 
         backup_file_name = f"{time_now}_simulation_results.pkl"
@@ -165,6 +178,7 @@ class SuperMarioAgenteTEL:
 
         if results_eval == 0:
             self.best_map_actions = map_actions
+            self.best_map_actions_results = results
 
     def eval_actions(self, results):
         """
@@ -203,6 +217,7 @@ class SuperMarioAgenteTEL:
         """
         ### Placeholder
         best_sol = self.best_map_actions
+        best_result = self.best_map_actions_results
         for i in range(self.args.n_training_steps):
             new_map_actions = self.make_next_actions()
             new_results = self.make_results(new_map_actions)
