@@ -19,10 +19,10 @@ def run_simulation(args, map_actions, env_actions, pixel2baldoza):
             "life": 2,
             "score": 0,
             "stage": 1,
-            "status": "small",
+            "status": "dead",
             "time": 400,
             "world": 1,
-            "x_pos": 40,
+            "x_pos": 1,
             "y_pos": 79
         }
 
