@@ -83,6 +83,7 @@ def run_simulation(render, map_actions, env_actions, pixel2baldoza):
         if render:
             env.render()
 
+        done = False
 
     env.close()
 
