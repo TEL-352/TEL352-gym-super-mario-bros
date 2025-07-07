@@ -48,14 +48,14 @@ def make_environment_actions() -> List[List[str]]:
     no confundir con la lista de acciones por baldoza    
     """
 
-    # placeholder, reemplazar por lista propia de acciones
     actions = [
-        ["NOOP"],
-        ["left", "B"],
-        ["right", "B"],
-        ["right", "A"],
-        ["right", "A", "B"],
-        ["A", "B"]
+        ["right"],               # 0: Caminar derecha
+        ["right", "B"],          # 1: Correr derecha
+        ["right", "A"],          # 2: Salto corto derecha
+        ["right", "A", "B"],     # 3: Salto largo derecha (corriendo)
+        ["A"],                   # 4: Salto vertical
+        ["right", "A", "B", "down"],  # 6: Salto largo bajo
+        ["right", "down"],       # 6: Deslizarse derecha
+        ["down"],                # 7: Agacharse
     ]
-
-    return actions 
+    return actions

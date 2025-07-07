@@ -1,14 +1,6 @@
 # Proyecto de TEL352 - Seminario de Telemática II 
 
 Repositorio base para el proyecto de la asignatura TEL352
-
-**_RECUERDE ACTUALIZAR ESTE README CON LAS INSTRUCCIONES PARA EJECUTAR SU AGENTE_**
-
-**_SI CREA NUEVOS ARCHIVOS, DEBE DESCRIBIRLOS BREVEMENTE EN LA ESTRUCTURA DEL REPOSITORIO_**
-
-- **_Tienen total libertad para modificar las firmas de las funciones (inputs-outputs)_**
-- **_Tienen total libertad para construir sus funciones o implementar sus heurísticas en archivos separados (por comodidad y orden), en caso de hacer eso se les pide construir el wrapper pertinente dentro de la clase definida en agente.py para mantener el flujo de la simulación (wrapper = crear un método nuevo en la clase que llame a la función que hicieron en un archivo separado)_**
-
 ## Configuración de entorno:
 
 - Instalar Python 3.8
@@ -34,21 +26,17 @@ El repositorio consta de los siguientes archivos
 
 ---
 
-**_(EDITAR SI CREA ARCHIVOS)_** Archivos creados para la solución implementada:
-
-- `archivo1`: descripción archivo1 
 
 ## Ejecución del programa:
 
 El programa se debe ejecutar por medio del archivo `main.py`, para lo cual se puede utilizar el siguiente comando como base:
-- `python main.py --n_frames 10000 --n_training_steps 100`
+- `python main.py --n_frames 10000 --n_training_steps 300 --ls_iteration 15 --perturbation_size 10`
     - A la derecha de `main.py` van todos los argumentos o parámetros definidos en el archivo `setup.py`
 
-**_(EDITAR LÍNEA DE COMANDO CON LOS PARÁMETROS AGREGADOS EN `setup.py` Y LOS VALORES UTILIZADOS POR SU AGENTE)_**
 
 Línea de comando para ejecutar el programa:
 
-- `python main.py --n_frames 10000 --n_training_steps 100`
+- `python main.py --n_frames 10000 --n_training_steps 300 --ls_iteration 15 --perturbation_size 10`
 
 ## Evaluación del agente:
 
@@ -56,4 +44,4 @@ Una vez finalizada la ejecución de su agente, debería aparecer un nuevo direct
 
 Para evaluar su agente se debe ejecutar el archivo `eval.py`. Este archivo puede recibir como argumentos el flag `--render` para renderizar el juego ejecutando sus acciones y `--date YYYY_MM_DD_HH_mm_ss` para elegir la fecha que de la solución que se quiere evaluar. Por ejemplo, si al ejecutar el archivo `main.py` se genera dentro de `outputs` el archivo `2025_06_01_10_15_17_simulation_results.pkl`, podemos evaluar esta solución ejecutando la siguiente línea de comando:
 
-- `python eval.py --render --date 2025_06_01_10_15_17`
+- `python eval.py --render --date 2025_07_04_20_57_11`

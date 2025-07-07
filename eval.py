@@ -31,7 +31,8 @@ def run_simulation(render, map_actions, env_actions, pixel2baldoza):
     """
     env = gym_super_mario_bros.make('SuperMarioBros-v0')
     env = JoypadSpace(env, env_actions)
-
+    print("Acciones disponibles:")
+    print(env.get_action_meanings())
     done = True
     info = {
         "coins": 0,
@@ -50,7 +51,7 @@ def run_simulation(render, map_actions, env_actions, pixel2baldoza):
         "info": info,
     }
 
-    while True:
+    for step in range(10000):
         if done:
             state = env.reset()
 
@@ -70,17 +71,25 @@ def run_simulation(render, map_actions, env_actions, pixel2baldoza):
                 *env.step(action_idx), n_lives
             )
 
-        # print(sim_results)
-        if sim_results == "dead":
+        # Verificar si Mario murió
+        if info["life"] < n_lives:
             results["info"]["status"] = "dead"
             print("Oh no!, Mario ha perdido antes de llegar a la meta")
             break
 
-        results["info"] = info
-
-        if sim_results == "win":
+        # Verificar si Mario completó el nivel
+        if done or info["flag_get"]:
+            results["info"]["status"] = "win"
             print("Muy Bien! Mario ha conseguido llegar a la meta y completar el nivel!")
             break
+
+        # Verificar si se acabó el tiempo
+        if info["time"] <= 0:
+            results["info"]["status"] = "timeout"
+            print("Se acabó el tiempo!")
+            break
+
+        results["info"] = info
 
         if render:
             env.render()
@@ -88,7 +97,6 @@ def run_simulation(render, map_actions, env_actions, pixel2baldoza):
     env.close()
 
     return results["info"]
-
 
 
 if __name__ == "__main__":

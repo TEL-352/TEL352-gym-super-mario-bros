@@ -20,7 +20,9 @@ def main_parse_args(args):
     # Número de steps o iteraciones para el entrenamiento de su algoritmo
     parser.add_argument("--n_training_steps", type=int, default=100)
 
-    # Puede agregar todos los hiper-parámetros que estime necesario (tamaño de población, número de hormigas, etc)
-
-
+    parser.add_argument("--ls_iterations", type=int, default=10,
+                       help="Iteraciones de búsqueda local por cada ILS")
+    parser.add_argument("--perturbation_size", type=int, default=5,
+                       help="Número de baldozas a perturbar")
+    
     return parser.parse_args(args)
