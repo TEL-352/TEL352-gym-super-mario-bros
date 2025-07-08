@@ -1,3 +1,4 @@
+
 def conversion_pixel_baldoza(n_pixel: int, mario_status: str) -> int:
     """
     Esta función se llama automáticamente en el archivo mario_gym.py
@@ -23,13 +24,7 @@ def conversion_pixel_baldoza(n_pixel: int, mario_status: str) -> int:
     El retorno debe ser un número entero!
 
     """
-
     baldoza_size = 16
-    mario_size = 16
-
-    if mario_status == "small":
-        mario_size = 12
-
-    # Modificar retorno
-    # El retorno debe ser un número entero!
-    return 1
+    n_baldoza = n_pixel // baldoza_size
+    
+    return int(n_baldoza)

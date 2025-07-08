@@ -48,14 +48,28 @@ def make_environment_actions() -> List[List[str]]:
     no confundir con la lista de acciones por baldoza    
     """
 
-    # placeholder, reemplazar por lista propia de acciones
+
+
     actions = [
-        ["NOOP"],
-        ["left", "B"],
-        ["right", "B"],
-        ["right", "A"],
-        ["right", "A", "B"],
-        ["A", "B"]
-    ]
+            ["right"],
+            ["right", "B"],
+            ["right", "A"],
+            ["right", "A"],
+            ["right", "A", "B"],
+            ["right"],
+            ["A"],
+            ["right", "A", "B"],
+
+            ###aqui comienzan las k se pusieron despues del mejor resultado
+
+            ["NOOP"],
+            ["down"],
+            ["left"],
+            ["right"]
+
+        ]
+
+
+        
 
     return actions 

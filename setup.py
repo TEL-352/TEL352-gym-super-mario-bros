@@ -7,20 +7,22 @@ def main_parse_args(args):
     Configuración de hiper-parámetros!
     Parsea los argumentos recibidos desde la línea de comandos
     """
-    parser = argparse.ArgumentParser(description="TEL 352 - Agente Inteligente")
+    parser = argparse.ArgumentParser(description="TEL 352 - Agente Inteligente con Búsqueda Tabú")
     
-    # Flag para renderizar la ventana de Mario durante la ejecución
-    # Puede ser útil no renderizar para acelerar el entrenamiento
-    parser.add_argument("--render", action="store_true")
+    # --- Parámetros de Ejecución ---
+    parser.add_argument("--render", action="store_true", help="Renderiza cada simulación. Ralentiza masivamente el entrenamiento.")
+    parser.add_argument("--render_progress", action="store_true", help="Renderiza una simulación cada vez que se encuentra una nueva mejor solución.")
     
-    # Configurar acorde al criterio de término elegido
-    # La simulación (intento de completar el nivel) terminará una vez alcanzado los n_frames establecidos
+    # --- NUEVO ARGUMENTO ---
+    parser.add_argument("--load_from", type=str, default=None, help="Ruta al archivo .pkl de una simulación anterior para continuar el entrenamiento (ej. outputs/2023_10_28_10_30_00_simulation_results.pkl).")
+    
+    # --- Parámetros de Simulación y Entrenamiento ---
     parser.add_argument("--n_frames", type=int, default=10000)
-
-    # Número de steps o iteraciones para el entrenamiento de su algoritmo
     parser.add_argument("--n_training_steps", type=int, default=100)
 
-    # Puede agregar todos los hiper-parámetros que estime necesario (tamaño de población, número de hormigas, etc)
-
+    # --- Parámetros para la Búsqueda Tabú ---
+    parser.add_argument("--n_tiles", type=int, default=220, help="Número de baldosas en el vector de solución.")
+    parser.add_argument("--n_neighbors", type=int, default=30, help="Número de vecinos a generar por iteración.")
+    parser.add_argument("--tabu_tenure", type=int, default=15, help="Número de iteraciones que un movimiento permanece tabú.")
 
     return parser.parse_args(args)
