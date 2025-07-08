@@ -30,6 +30,14 @@ def conversion_pixel_baldoza(n_pixel: int, mario_status: str) -> int:
     if mario_status == "small":
         mario_size = 12
 
+    # print(n_pixel
     # Modificar retorno
     # El retorno debe ser un número entero!
-    return 1
+
+    n_pixel_mario = n_pixel + mario_size
+
+    current_tile = (n_pixel_mario//baldoza_size)
+
+    # print(current_tile)
+
+    return  current_tile

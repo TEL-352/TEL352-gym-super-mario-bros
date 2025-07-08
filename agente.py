@@ -1,6 +1,7 @@
 import os
+import random
 from typing import List
-
+import pdb
 import cloudpickle
 import datetime
 
@@ -16,10 +17,18 @@ class SuperMarioAgenteTEL:
 
         # Define las acciones váldias para el entorno según lo definido en acciones.py
         self.actions = self.make_environment_actions()
+        
+        self.historic_results_evals = []
 
+        self.map_size = 3584
+
+        self.alpha = 1
+        self.evaporation = 0.1
+        self.reinforcement = 0.1
         # Almacena el mapeo de acciones a realizar por cada baldoza
         # Se debe actualizar con el mejor mapeo de acciones encontrado en cada iteración
         # puede no ser un diccionario, ajustar a conveniencia (ver REPRESENTACION.md)
+        self.best_result = 0
         self.best_map_actions = {}
         self.best_map_actions_results = {
             "coins": 0,
@@ -42,6 +51,14 @@ class SuperMarioAgenteTEL:
 
         # Sientanse en libertad de agregar todos los atributos
         # que necesiten para su agente
+
+        # Acá defino la estructura para el modelamiento de las feromonas.
+        # Se representaran mediante una matriz [i,j] donde i representa la casilla y j representa la accion.
+        # El valor contenido en la combinacion de [i,j] corresponde a la cantidad de feromona asociada al movimiento en esa casilla. 
+        n_actions = len(self.actions)
+        initial_pheromone = 0.1
+        map_tiles = self.map_size//16
+        self.pheromones = [[initial_pheromone for _ in range(n_actions)] for _ in range(map_tiles)]
 
     def conversion_pixel_baldoza(self, n_pixel: int, mario_status: str) -> int:
         """
@@ -66,7 +83,6 @@ class SuperMarioAgenteTEL:
         """
         time_now = datetime.datetime.now()
         time_now = time_now.strftime("%Y_%m_%d_%H_%M_%S")
-
         backup_data = {
             "historic_actions": self.historic_map_actions,
             "historic_results": self.historic_results,
@@ -111,12 +127,18 @@ class SuperMarioAgenteTEL:
             El número de la baldoza se obtiene según su implementación de pixel2cell.py
             El índice de la acción se obtiene según su implementación de acciones.py
         """
+        # Inicializamos la lista de acciones vacia
+        map_actions = []
 
-        map_actions = [
-            0,
-            0,
-            1,
-        ]
+        n_actions = len(self.actions)
+        # ----------------------------------Construir solución----------------------------------
+        # Calculo de probabilidades para cada elección y seleccion de acciones
+
+        for fila in self.pheromones:
+            valores = [tau**self.alpha for tau in fila]
+            total = sum(valores)
+            probs = [v / total for v in valores]
+            map_actions.append(random.choices( list(range(n_actions)), weights=probs, k=1 )[0])
 
         return map_actions
 
@@ -133,7 +155,8 @@ class SuperMarioAgenteTEL:
             y como valor para esa baldoza retorna el índice de la acción a realizar
             El número de la baldoza se obtiene según su implementación de pixel2cell.py
             El índice de la acción se obtiene según su implementación de acciones.py
-        """
+        """ 
+
         results = self.run_simulation(map_actions)
 
         """
@@ -175,10 +198,39 @@ class SuperMarioAgenteTEL:
         la mejor solución (o las mejores) soluciones encontradas
         """
         results_eval = self.eval_actions(results)
-
-        if results_eval == 0:
+        self.historic_results_evals.append(results_eval)
+        reached_tile = results["x_pos"]//16
+        #print(f"reached position: {reached_tile}")
+        prom = sum(self.historic_results_evals) / len(self.historic_results_evals)
+        print(f"promedio: {prom}")
+        if self.best_map_actions == []:
             self.best_map_actions = map_actions
             self.best_map_actions_results = results
+            self.best_result = results_eval
+        if results_eval > prom:
+            #print(f"añadiendo feromonas")
+            if results_eval > self.best_result:
+                print("guardando mejor resultado")
+                self.best_map_actions = map_actions
+                print(self.best_map_actions)
+                self.best_map_actions_results = results
+                self.best_result = results_eval
+                for i, action in enumerate(map_actions):
+                    if i <= reached_tile - 4:
+                        self.pheromones[i][action] = 99
+            else:
+                for i, action in enumerate(map_actions):
+                    if i <= reached_tile - 4:
+                        self.pheromones[i][action] = self.reinforcement + self.pheromones[i][action]
+        else:
+            #print("restringindiendo feromonas")
+            #print(f" Antes Feromonas de badoza de fallo: {self.pheromones[reached_tile][map_actions[reached_tile]]} para la baldoza: {reached_tile}  feromona calculada: {(1-self.evaporation) * self.pheromones[reached_tile][map_actions[reached_tile]] }")
+            for i, action in enumerate(map_actions):
+                if i <= reached_tile and i>= reached_tile-3:
+                    self.pheromones[i][action] = 0.1*(self.pheromones[i][action])
+
+            #self.pheromones[reached_tile][map_actions[reached_tile]] = (1-self.evaporation) * self.pheromones[reached_tile][map_actions[reached_tile]] 
+            #print(f"Despues Feromonas de badoza de fallo: {self.pheromones[reached_tile][map_actions[reached_tile]]} para la baldoza: {reached_tile}  feromona calculada: {(1-self.evaporation) * self.pheromones[reached_tile][map_actions[reached_tile]] }")
 
     def eval_actions(self, results):
         """
@@ -192,16 +244,21 @@ class SuperMarioAgenteTEL:
         # También se puede combinar con el tiempo restante,
         # todo dependerá de la función objetivo y del criterio de evaluación que definan
 
-        return 0
+        # Voy a definir como criterio de evaluación el porcentaje de completación del mapa.
+
+        x_pos = results["x_pos"]
+
+        results_eval = (x_pos/self.map_size)
+
+        return results_eval
 
     def criterio_de_termino(self):
-        """
-        En esta función debe definir su criterio de término.
-
-        Sientase en libertad de agregar todos los parámetros y las salidas que necesite 
-        """
-
-        return True
+        print(self.best_map_actions_results["flag_get"])
+        if self.best_map_actions_results["flag_get"] == True:
+            print("stop")
+            return True
+        else:
+            return False
 
     def train(self):
         """
@@ -221,12 +278,12 @@ class SuperMarioAgenteTEL:
         for i in range(self.args.n_training_steps):
             new_map_actions = self.make_next_actions()
             new_results = self.make_results(new_map_actions)
-
+            
             self.historic_map_actions.append(new_map_actions)
             self.historic_results.append(new_results)
 
             self.update_best_map_action(new_map_actions, new_results)
-
+            #print(self.pheromones)
             if self.criterio_de_termino():
                 break
         

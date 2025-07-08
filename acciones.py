@@ -50,12 +50,16 @@ def make_environment_actions() -> List[List[str]]:
 
     # placeholder, reemplazar por lista propia de acciones
     actions = [
-        ["NOOP"],
-        ["left", "B"],
+        #["left"],
+        ["right"],
+        #["left", "B"],
         ["right", "B"],
+        #["left", "A"],
         ["right", "A"],
         ["right", "A", "B"],
-        ["A", "B"]
+        ["right", "A"],
+        ["right", "A", "B"],
+        #["left", "A", "B"]
     ]
 
     return actions 
