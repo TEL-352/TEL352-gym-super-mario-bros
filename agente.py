@@ -1,47 +1,108 @@
 import os
 from typing import List
-
 import cloudpickle
 import datetime
+import random
+import math # Para la función exponencial
 
+# Suponiendo que estas funciones existen en otros archivos como se indica
 from acciones import make_environment_actions
 from mario_gym import run_simulation
 from pixel2cell import conversion_pixel_baldoza
 
+# --- PARÁMETROS DE RECOCIDO SIMULADO (AJUSTAR SEGÚN NECESIDAD) ---
+# Si no usas self.args, puedes definirlos aquí directamente o pasarlos al constructor
+DEFAULT_INITIAL_TEMPERATURE = 1000.0  # Temperatura inicial alta para exploración
+DEFAULT_COOLING_RATE = 0.99           # Tasa de enfriamiento (ej. 0.99 para enfriamiento geométrico)
+DEFAULT_MIN_TEMPERATURE = 0.1         # Temperatura mínima para criterio de término
+DEFAULT_MAX_ITERATIONS = 5000         # Máximo de iteraciones si no hay args.n_training_steps
+
+# --- PARÁMETROS DE LA FUNCIÓN DE COSTO (AJUSTAR PESOS PARA CADA OBJETIVO) ---
+WEIGHT_X_POS = 1.0     # Recompensar avance horizontal
+WEIGHT_SCORE = 0.1     # Recompensar puntaje
+WEIGHT_COINS = 1.0     # Recompensar monedas (asumiendo que valen más que el score base por punto)
+WEIGHT_TIME = 0.5      # Recompensar tiempo restante
+PENALTY_NO_FLAG = 1000000 # Gran penalización por no llegar a la bandera
+PENALTY_DEAD = 10000000 # Penalización masiva por morir
+PENALTY_ERROR = 5000000 # Penalización por acciones no definidas
+
+# --- PARÁMETROS DE LA REPRESENTACIÓN DE ACCIONES ---
+# Mario 1-1 tiene ~3200 pixeles de largo. Si una baldoza es de 16x16 pixeles, son ~200 baldozas.
+# Se recomienda un valor ligeramente mayor para cubrir posibles saltos o errores.
+MAX_BALDOZA_INDEX = 250 # Número máximo de baldozas para las que se almacenará una acción
 
 class SuperMarioAgenteTEL:
     def __init__(self, args):
-        # Recibe los argumentos enviados por la línea de comando
         self.args = args
 
-        # Define las acciones váldias para el entorno según lo definido en acciones.py
+        # Define las acciones válidas para el entorno
         self.actions = self.make_environment_actions()
+        self.num_possible_actions = len(self.actions) # Cuántas combinaciones de acciones hay
 
-        # Almacena el mapeo de acciones a realizar por cada baldoza
-        # Se debe actualizar con el mejor mapeo de acciones encontrado en cada iteración
-        # puede no ser un diccionario, ajustar a conveniencia (ver REPRESENTACION.md)
-        self.best_map_actions = {}
+        # Atributos específicos de Recocido Simulado
+        self.initial_temperature = getattr(args, 'initial_temperature', DEFAULT_INITIAL_TEMPERATURE)
+        self.cooling_rate = getattr(args, 'cooling_rate', DEFAULT_COOLING_RATE)
+        self.min_temperature = getattr(args, 'min_temperature', DEFAULT_MIN_TEMPERATURE)
+        self.current_temperature = self.initial_temperature
+
+        # Inicializa best_map_actions_results con un estado por defecto antes de usarlo
         self.best_map_actions_results = {
             "coins": 0,
             "flag_get": False,
             "life": 2,
             "score": 0,
             "stage": 1,
-            "status": "dead",
+            "status": "initial", # Puedes cambiar a "initial" o "running"
             "time": 400,
             "world": 1,
             "x_pos": 1,
             "y_pos": 79
         }
 
-        # Almacena el histórico del mapeo de acciones y de sus resultados
-        # Se debe actualizar en cada ejecución para ir llevando un registro histórico
-        # y facilitar la comparación de desempeño entre cada step
+        # current_map_actions se inicializa al inicio del entrenamiento
+        self.current_map_actions = self._initialize_map_actions()
+
+        # Ahora current_results puede usar una copia del diccionario por defecto
+        self.current_results = self.best_map_actions_results.copy()
+        self.current_cost = float('inf') # Costo inicial alto, se actualizará en train()
+
+        # best_map_actions y best_cost se inicializan con la solución actual al inicio
+        self.best_map_actions = list(self.current_map_actions) # Se actualizará durante el entrenamiento
+        self.best_cost = float('inf') # El costo de la mejor solución encontrada, se actualizará en train()
+
+        # Histórico de mapeos de acciones y resultados para seguimiento
         self.historic_map_actions = []
         self.historic_results = []
+        self.historic_costs = [] # Para llevar un registro de la evolución del costo
 
-        # Sientanse en libertad de agregar todos los atributos
-        # que necesiten para su agente
+        print(f"Agente Recocido Simulado inicializado con T_inicial={self.initial_temperature}, "
+              f"cooling_rate={self.cooling_rate}, baldozas_max={MAX_BALDOZA_INDEX}, "
+              f"acciones_posibles={self.num_possible_actions}")
+
+    def _initialize_map_actions(self) -> List[int]:
+        """
+        Inicializa un 'map_actions' para todas las baldozas posibles.
+        Una buena estrategia inicial es que Mario siempre intente ir a la derecha.
+        Asumimos que el índice 1 corresponde a la acción 'right'.
+        Si 'right' no es el índice 1, ajustar.
+        """
+        initial_action_index_for_right = -1
+        # Intentar encontrar el índice de la acción 'right'
+        for i, action_list in enumerate(self.actions):
+            if action_list == ['right']:
+                initial_action_index_for_right = i
+                break
+        
+        # Si no se encuentra 'right', usar una acción por defecto (ej. NOOP o la primera acción)
+        if initial_action_index_for_right == -1 and self.num_possible_actions > 0:
+            initial_action_index_for_right = 0 # O la acción que represente "NOOP"
+            print("Advertencia: No se encontró la acción 'right'. Inicializando con la primera acción disponible.")
+        elif self.num_possible_actions == 0:
+             raise ValueError("No hay acciones definidas en make_environment_actions().")
+
+
+        # Inicializar todas las baldozas con la acción de ir a la derecha (o la acción por defecto)
+        return [initial_action_index_for_right] * MAX_BALDOZA_INDEX
 
     def conversion_pixel_baldoza(self, n_pixel: int, mario_status: str) -> int:
         """
@@ -49,7 +110,9 @@ class SuperMarioAgenteTEL:
         Modificar directamente el archivo pixel2cell.py
         No modificar este método
         """
-        return conversion_pixel_baldoza(n_pixel, mario_status)
+        # Asegúrate de que esta función devuelve un índice dentro de [0, MAX_BALDOZA_INDEX-1]
+        baldoza_index = conversion_pixel_baldoza(n_pixel, mario_status)
+        return min(baldoza_index, MAX_BALDOZA_INDEX - 1) # Asegura que no exceda el límite
 
     def make_environment_actions(self) -> List[List[str]]:
         """
@@ -70,16 +133,20 @@ class SuperMarioAgenteTEL:
         backup_data = {
             "historic_actions": self.historic_map_actions,
             "historic_results": self.historic_results,
+            "historic_costs": self.historic_costs, # Guardar también el historial de costos
             "best_actions": self.best_map_actions,
             "best_results": self.best_map_actions_results,
+            "best_cost": self.best_cost, # Guardar el mejor costo
+            "final_temperature": self.current_temperature
         }
 
-        backup_file_name = f"{time_now}_simulation_results.pkl"
         outdir = "outputs/"
         os.makedirs(outdir, exist_ok=True)
+        backup_file_name = f"{outdir}/{time_now}_sa_simulation_results.pkl"
 
-        with open(f"{outdir}/{backup_file_name}", mode="wb") as file:
+        with open(backup_file_name, mode="wb") as file:
             cloudpickle.dump(backup_data, file)
+        print(f"Resultados de simulación guardados en: {backup_file_name}")
 
     def run_simulation(self, map_actions):
         """
@@ -98,136 +165,173 @@ class SuperMarioAgenteTEL:
             self.conversion_pixel_baldoza,
         )
 
-    def make_next_actions(self):
+    def make_next_actions(self) -> List[int]:
         """
-        Función para generar la lista de acciones a utilizar en la iteración actual
+        Función para generar una solución "vecina" (neighbor)
+        a partir del `self.current_map_actions`.
 
-        Esta (o estas) acción se debe generar como resultado de la implementación
-        de la heurística que se le asignó a cada estudiante
-
-        La (o las) lista de acciones generada debe cumplir con lo siguiente:
-            Estructura que tiene como índice el número de la baldoza
-            y como valor para esa baldoza almacenar el índice de la acción a realizar
-            El número de la baldoza se obtiene según su implementación de pixel2cell.py
-            El índice de la acción se obtiene según su implementación de acciones.py
+        Esto se hace tomando una copia de la solución actual y
+        modificando aleatoriamente la acción para una baldoza al azar.
         """
+        neighbor_map_actions = list(self.current_map_actions) # Copia de la solución actual
 
-        map_actions = [
-            0,
-            0,
-            1,
-        ]
+        # Selecciona un índice de baldoza aleatorio para modificar
+        # Asegúrate de que el índice esté dentro del rango de MAX_BALDOZA_INDEX
+        baldoza_to_change_idx = random.randint(0, MAX_BALDOZA_INDEX - 1)
 
-        return map_actions
+        # Selecciona una nueva acción aleatoria para esa baldoza
+        new_action_idx = random.randint(0, self.num_possible_actions - 1)
+
+        # Aplica el cambio
+        neighbor_map_actions[baldoza_to_change_idx] = new_action_idx
+
+        return neighbor_map_actions
 
     def make_results(self, map_actions):
         """
         No modificar
         Esta función solo ejecuta el run_simulations para generar los resultados
         a partir del map_actions generado por el agente
-        En esta función se explican los contenidos de los resultados
-        puede ser útil al momento de decidir un criterio de evaluación para su agente
-
-        map_actions:
-            Estructura que tiene como índice el número de la baldoza
-            y como valor para esa baldoza retorna el índice de la acción a realizar
-            El número de la baldoza se obtiene según su implementación de pixel2cell.py
-            El índice de la acción se obtiene según su implementación de acciones.py
         """
         results = self.run_simulation(map_actions)
-
-        """
-        results es un diccionario con las siguientes llaves:
-          "coins":
-              int con el número de monedas recolectadas
-          "flag_get":
-              bool que indica si se llegó a la bandera (True) o no (False)
-          "life":
-              int con la cantidad de vidas restantes
-              Inicialmente es 2, puede aumentar cada vez que
-              Mario consigue un champiñon verde o recolecta 100 monedas
-              En teoría nunca disminuirá, para eso esta el "status" con valor "dead"
-          "score":
-              int con el puntaje actual de Mario
-          "world":
-              int con el número del mundo que se está jugando
-          "stage":
-              int con el número del nivel que se está jugando
-          "status":
-              "small" cuando Mario es pequeño (estado inicial),
-              "big" cuando consume un champiñon,
-              "dead" cuando Mario pierde ante alguno de los obstáculos del nivel
-              "error" cuando el agente no tiene una acción definida para una determinada baldoza
-          "time":
-              int con el tiempo restante para completar el nivel, si llega a 0 Mario pierde
-              Inicialmente tiene valor 400 y va disminuyendo hasta llegar a 0 a medida que avanza el juego
-          "x_pos":
-              int con la posición de Mario en el eje X del nivel
-          "y_pos":
-              int con la posición de Mario en el eje Y del nivel
-        """
-
         return results
 
-    def update_best_map_action(self, map_actions, results):
+    def eval_actions(self, results) -> float:
         """
-        En esta función debe definir su criterio de selección para actualizar
-        la mejor solución (o las mejores) soluciones encontradas
+        Función de evaluación (función de costo) para el Recocido Simulado.
+        El objetivo es MINIMIZAR este valor.
+
+        Un costo menor significa una mejor solución.
+        Se prioriza llegar a la bandera, luego la x_pos, el tiempo, el puntaje y las monedas.
+        Se penaliza morir o errores.
         """
-        results_eval = self.eval_actions(results)
+        cost = 0.0
 
-        if results_eval == 0:
-            self.best_map_actions = map_actions
-            self.best_map_actions_results = results
+        # Penalizaciones por estados de fallo
+        if results["status"] == "dead":
+            cost += PENALTY_DEAD
+        elif results["status"] == "error":
+            cost += PENALTY_ERROR
 
-    def eval_actions(self, results):
+        # Penalización por no llegar a la bandera
+        if not results["flag_get"]:
+            cost += PENALTY_NO_FLAG
+            # Si no llegó a la bandera, el x_pos es muy importante
+            # Cuanto más avance, menor será el costo (x_pos max es ~3200)
+            # Normalizar para que x_pos sea un valor que se resta al costo base.
+            # Max_x_pos podría ser 3200-3400. Una forma de convertir x_pos a costo es:
+            # costo = (MAX_POS_EN_NIVEL - x_pos) * peso_x_pos
+            # Si x_pos es 3200, entonces costo es 0. Si x_pos es 0, costo es MAX_POS_EN_NIVEL * peso.
+            MAX_X_LEVEL_1 = 3200 # Asumimos la longitud máxima de Mario 1-1 en pixeles
+            cost += (MAX_X_LEVEL_1 - results["x_pos"]) * WEIGHT_X_POS
+        else:
+            # Si llega a la bandera, su x_pos no es tan relevante,
+            # lo importante es qué tan rápido (tiempo) y qué tan bien (score, coins) lo hizo.
+            cost -= results["x_pos"] * WEIGHT_X_POS * 0.1 # Menor peso para x_pos si ya llegó a la meta
+
+
+        # Restar los elementos que queremos maximizar (para minimizar el costo total)
+        cost -= results["score"] * WEIGHT_SCORE
+        cost -= results["coins"] * WEIGHT_COINS
+        cost -= results["time"] * WEIGHT_TIME # Recompensa por tiempo restante
+
+        return cost
+
+    def update_best_map_action(self, map_actions, results, cost):
         """
-        En esta función debe definir su función de evaluación para su agente
-        La entrada corresponde al diccionario de resultados obtenido con make_results
+        Actualiza la mejor solución GLOBAL encontrada hasta el momento.
         """
-        # Placeholder, cambiar por su implementación de eval
-        # Puede ser útil revisar el status y la x_pos (o baldoza) alcanzada por Mario
-        # Por ejemplo, los status "dead" o "error" combinados con la x_pos alcanzada
-        # nos pueden dar un indicador de que tan cerca de la meta quedó Mario
-        # También se puede combinar con el tiempo restante,
-        # todo dependerá de la función objetivo y del criterio de evaluación que definan
+        if cost < self.best_cost:
+            self.best_cost = cost
+            self.best_map_actions = list(map_actions) # Asegurarse de copiar la lista
+            self.best_map_actions_results = results.copy()
+            print(f"  Nuevo mejor costo global: {self.best_cost:.2f}, X_pos: {results['x_pos']}, Flag: {results['flag_get']}, Status: {results['status']}")
 
-        return 0
-
-    def criterio_de_termino(self):
+    def criterio_de_termino(self, iteration: int) -> bool:
         """
-        En esta función debe definir su criterio de término.
-
-        Sientase en libertad de agregar todos los parámetros y las salidas que necesite 
+        Define el criterio de término para el algoritmo de Recocido Simulado.
+        Puede ser por número máximo de iteraciones, temperatura mínima,
+        o si no hay mejora significativa después de muchas iteraciones.
         """
-
-        return True
+        max_iterations = getattr(self.args, 'n_training_steps', DEFAULT_MAX_ITERATIONS)
+        
+        # Criterio 1: Temperatura muy baja
+        if self.current_temperature < self.min_temperature:
+            print(f"Criterio de término: Temperatura mínima alcanzada ({self.current_temperature:.2f} < {self.min_temperature:.2f}).")
+            return True
+        
+        # Criterio 2: Número máximo de iteraciones
+        if iteration >= max_iterations:
+            print(f"Criterio de término: Máximo de iteraciones alcanzado ({iteration} >= {max_iterations}).")
+            return True
+            
+        return False
 
     def train(self):
         """
-        En esta función debe definir el ciclo de entrenamiento para su algoritmo
-        Para ello defina todos los parámetros que estime necesario en el archivo setup.py
-        como por ejemplo: número de training steps, tamaño de la población, etc
-        También puede definir todos los atributos que necesite al inicio de la clase
-
-        En cada paso del entrenamiento debe almacenar una de las soluciones generadas
-        en self.historic_map_actions y su resultado correspondiente en self.historic_results
-        En el caso de tener múltiples soluciones por iteración,
-        queda a su criterio ver cual elegir para el histórico
+        Implementación del ciclo de entrenamiento para el Recocido Simulado.
         """
-        ### Placeholder
-        best_sol = self.best_map_actions
-        best_result = self.best_map_actions_results
-        for i in range(self.args.n_training_steps):
+        print("\nIniciando entrenamiento del agente con Recocido Simulado...")
+
+        # Inicializar la solución actual y su costo
+        # La solución inicial es self.current_map_actions
+        print("Ejecutando simulación inicial para establecer el estado actual y mejor estado...")
+        initial_results = self.make_results(self.current_map_actions) # Usa current_map_actions ya inicializado
+        self.current_results = initial_results.copy()
+        self.current_cost = self.eval_actions(initial_results)
+
+        # La solución inicial es la mejor encontrada hasta ahora
+        self.best_map_actions = list(self.current_map_actions)
+        self.best_map_actions_results = self.current_results.copy()
+        self.best_cost = self.current_cost
+        
+        print(f"Costo inicial de la solución: {self.current_cost:.2f}, X_pos: {initial_results['x_pos']}, Flag: {initial_results['flag_get']}, Status: {initial_results['status']}")
+
+        iteration = 0
+        while not self.criterio_de_termino(iteration):
+            print(f"\nIteración {iteration + 1}, Temperatura: {self.current_temperature:.2f}")
+
+            # Generar una nueva solución vecina
             new_map_actions = self.make_next_actions()
             new_results = self.make_results(new_map_actions)
+            new_cost = self.eval_actions(new_results)
 
-            self.historic_map_actions.append(new_map_actions)
-            self.historic_results.append(new_results)
+            # Calcular la diferencia de costo
+            delta_cost = new_cost - self.current_cost
 
-            self.update_best_map_action(new_map_actions, new_results)
+            # Decidir si aceptar la nueva solución
+            # Si la nueva solución es mejor, siempre la aceptamos
+            if delta_cost < 0:
+                print(f"  Mejora encontrada. Aceptando nueva solución (costo: {new_cost:.2f} < {self.current_cost:.2f}).")
+                self.current_map_actions = list(new_map_actions)
+                self.current_results = new_results.copy()
+                self.current_cost = new_cost
+            else:
+                # Si la nueva solución es peor, la aceptamos con cierta probabilidad
+                acceptance_probability = math.exp(-delta_cost / self.current_temperature)
+                if random.random() < acceptance_probability:
+                    print(f"  Peor solución aceptada (costo: {new_cost:.2f} > {self.current_cost:.2f}) con probabilidad: {acceptance_probability:.4f}.")
+                    self.current_map_actions = list(new_map_actions)
+                    self.current_results = new_results.copy()
+                    self.current_cost = new_cost
+                else:
+                    print(f"  Peor solución rechazada (costo: {new_cost:.2f} > {self.current_cost:.2f}).")
+            
+            # Actualizar la mejor solución global encontrada hasta ahora
+            self.update_best_map_action(self.current_map_actions, self.current_results, self.current_cost)
 
-            if self.criterio_de_termino():
-                break
-        
+            # Almacenar en el histórico
+            self.historic_map_actions.append(list(self.current_map_actions)) # Almacenar una copia
+            self.historic_results.append(self.current_results.copy())
+            self.historic_costs.append(self.current_cost)
+
+            # Enfriar la temperatura
+            self.current_temperature *= self.cooling_rate
+            
+            iteration += 1
+
+        print("\nEntrenamiento con Recocido Simulado finalizado.")
+        print(f"Mejor costo global encontrado: {self.best_cost:.2f}")
+        print(f"Resultados de la mejor solución: {self.best_map_actions_results}")
+
         self.save_simulation_results()

@@ -20,7 +20,14 @@ def main_parse_args(args):
     # Número de steps o iteraciones para el entrenamiento de su algoritmo
     parser.add_argument("--n_training_steps", type=int, default=100)
 
-    # Puede agregar todos los hiper-parámetros que estime necesario (tamaño de población, número de hormigas, etc)
+    # --- Parámetros específicos para Recocido Simulado ---
+    parser.add_argument("--initial_temperature", type=float, default=1000.0,
+                        help="Temperatura inicial para el algoritmo de Recocido Simulado.")
+    parser.add_argument("--cooling_rate", type=float, default=0.99,
+                        help="Tasa de enfriamiento para el algoritmo de Recocido Simulado (ej. 0.99 para enfriamiento geométrico).")
+    parser.add_argument("--min_temperature", type=float, default=0.1,
+                        help="Temperatura mínima para el criterio de término del Recocido Simulado.")
 
+    # Puede agregar todos los hiper-parámetros que estime necesario (tamaño de población, número de hormigas, etc)
 
     return parser.parse_args(args)
