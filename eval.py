@@ -66,7 +66,9 @@ def run_simulation(render, map_actions, env_actions, pixel2baldoza):
 
         sim_results = ""
         with open("eval_function.pkl", "rb") as f:
-            sim_results = cloudpickle.loads(f.read())["f"](*env.step(action_idx), n_lives)
+            state, reward, done, info, sim_results = cloudpickle.loads(f.read())["f"](
+                *env.step(action_idx), n_lives
+            )
 
         # print(sim_results)
         if sim_results == "dead":
@@ -82,8 +84,6 @@ def run_simulation(render, map_actions, env_actions, pixel2baldoza):
 
         if render:
             env.render()
-
-        done = False
 
     env.close()
 
