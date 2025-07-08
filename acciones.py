@@ -24,18 +24,18 @@ def make_environment_actions() -> List[List[str]]:
     "left": presiona el botón para hacer avanzar a Mario hacia la izquierda
     
     "down": presiona el botón para hacer avanzar a Mario hacia abajo
-              (útil para entrar en una tubería o para bajar cuando Mario escala)
+            (útil para entrar en una tubería o para bajar cuando Mario escala)
     
     "up": presiona el botón para hacer avanzar a Mario hacia arriba
-              (útil para subir cuando Mario escala)
+            (útil para subir cuando Mario escala)
     
     "A": presiona el botón para hacer saltar a Mario
-              Si se presiona durante varios frames consecutivos,
-              Mario saltará más alto hasta alcanzar la máxima altura
+            Si se presiona durante varios frames consecutivos,
+            Mario saltará más alto hasta alcanzar la máxima altura
     
     "B": presiona el botón para hacer correr a Mario
-              Se debe presionar consecutivamente
-              durante varios frames para notar la diferencia
+            Se debe presionar consecutivamente
+            durante varios frames para notar la diferencia
     
     Es posible presionar más de un botón al mismo tiempo, por ejemplo, la lista
     actions = [["right", "B", "A"]]
@@ -51,11 +51,11 @@ def make_environment_actions() -> List[List[str]]:
     # placeholder, reemplazar por lista propia de acciones
     actions = [
         ["NOOP"],
-        ["left", "B"],
         ["right", "B"],
+        ["left", "B"],
         ["right", "A"],
         ["right", "A", "B"],
         ["A", "B"]
     ]
 
-    return actions 
+    return actions

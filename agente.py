@@ -9,6 +9,7 @@ import math # Para la función exponencial
 from acciones import make_environment_actions
 from mario_gym import run_simulation
 from pixel2cell import conversion_pixel_baldoza
+from constants import MAX_BALDOZA_INDEX # ¡Nueva importación!
 
 # --- PARÁMETROS DE RECOCIDO SIMULADO (AJUSTAR SEGÚN NECESIDAD) ---
 # Si no usas self.args, puedes definirlos aquí directamente o pasarlos al constructor
@@ -18,18 +19,13 @@ DEFAULT_MIN_TEMPERATURE = 0.1         # Temperatura mínima para criterio de té
 DEFAULT_MAX_ITERATIONS = 5000         # Máximo de iteraciones si no hay args.n_training_steps
 
 # --- PARÁMETROS DE LA FUNCIÓN DE COSTO (AJUSTAR PESOS PARA CADA OBJETIVO) ---
-WEIGHT_X_POS = 1.0     # Recompensar avance horizontal
-WEIGHT_SCORE = 0.1     # Recompensar puntaje
-WEIGHT_COINS = 1.0     # Recompensar monedas (asumiendo que valen más que el score base por punto)
-WEIGHT_TIME = 0.5      # Recompensar tiempo restante
-PENALTY_NO_FLAG = 1000000 # Gran penalización por no llegar a la bandera
-PENALTY_DEAD = 10000000 # Penalización masiva por morir
-PENALTY_ERROR = 5000000 # Penalización por acciones no definidas
-
-# --- PARÁMETROS DE LA REPRESENTACIÓN DE ACCIONES ---
-# Mario 1-1 tiene ~3200 pixeles de largo. Si una baldoza es de 16x16 pixeles, son ~200 baldozas.
-# Se recomienda un valor ligeramente mayor para cubrir posibles saltos o errores.
-MAX_BALDOZA_INDEX = 250 # Número máximo de baldozas para las que se almacenará una acción
+WEIGHT_X_POS = 100.0     # ¡AUMENTADO! Recompensar avance horizontal mucho más
+WEIGHT_SCORE = 0.1       # Mantener igual por ahora
+WEIGHT_COINS = 1.0       # Mantener igual por ahora
+WEIGHT_TIME = 5.0        # ¡AUMENTADO! Recompensar tiempo restante mucho más
+PENALTY_NO_FLAG = 500000 # LIGERAMENTE REDUCIDO para que no compita tanto con la muerte temprana
+PENALTY_DEAD = 10000000  # Mantener muy alta para penalizar la muerte
+PENALTY_ERROR = 5000000  # Mantener igual
 
 class SuperMarioAgenteTEL:
     def __init__(self, args):
@@ -80,29 +76,33 @@ class SuperMarioAgenteTEL:
               f"acciones_posibles={self.num_possible_actions}")
 
     def _initialize_map_actions(self) -> List[int]:
-        """
-        Inicializa un 'map_actions' para todas las baldozas posibles.
-        Una buena estrategia inicial es que Mario siempre intente ir a la derecha.
-        Asumimos que el índice 1 corresponde a la acción 'right'.
-        Si 'right' no es el índice 1, ajustar.
-        """
-        initial_action_index_for_right = -1
-        # Intentar encontrar el índice de la acción 'right'
-        for i, action_list in enumerate(self.actions):
-            if action_list == ['right']:
-                initial_action_index_for_right = i
-                break
-        
-        # Si no se encuentra 'right', usar una acción por defecto (ej. NOOP o la primera acción)
-        if initial_action_index_for_right == -1 and self.num_possible_actions > 0:
-            initial_action_index_for_right = 0 # O la acción que represente "NOOP"
-            print("Advertencia: No se encontró la acción 'right'. Inicializando con la primera acción disponible.")
-        elif self.num_possible_actions == 0:
-             raise ValueError("No hay acciones definidas en make_environment_actions().")
+            """
+            Inicializa un 'map_actions' para todas las baldozas posibles.
+            Una buena estrategia inicial es que Mario siempre intente ir a la derecha y correr.
+            """
+            # Define la acción inicial deseada: 'right' y 'B' (correr)
+            desired_initial_action = ['right', 'A', 'B'] # ¡Cambiado a correr y saltar a la derecha!
+            initial_action_index = -1
+
+            # Intentar encontrar el índice de la acción deseada
+            for i, action_list in enumerate(self.actions):
+                # Compara las listas de acciones. El orden de los elementos no importa para la igualdad de conjuntos.
+                # Convertimos a set para comparar independientemente del orden.
+                if set(action_list) == set(desired_initial_action):
+                    initial_action_index = i
+                    break
+            
+            # Si no se encuentra la acción deseada, usar una acción por defecto (ej. NOOP o la primera acción)
+            if initial_action_index == -1:
+                if self.num_possible_actions > 0:
+                    initial_action_index = 0 # Usar la primera acción disponible (probablemente NOOP)
+                    print(f"Advertencia: No se encontró la acción '{desired_initial_action}'. Inicializando con la primera acción disponible ({self.actions[initial_action_index]}).")
+                else:
+                    raise ValueError("No hay acciones definidas en make_environment_actions().")
 
 
-        # Inicializar todas las baldozas con la acción de ir a la derecha (o la acción por defecto)
-        return [initial_action_index_for_right] * MAX_BALDOZA_INDEX
+            # Inicializar todas las baldozas con la acción deseada (o la acción por defecto)
+            return [initial_action_index] * MAX_BALDOZA_INDEX
 
     def conversion_pixel_baldoza(self, n_pixel: int, mario_status: str) -> int:
         """
@@ -166,26 +166,33 @@ class SuperMarioAgenteTEL:
         )
 
     def make_next_actions(self) -> List[int]:
-        """
-        Función para generar una solución "vecina" (neighbor)
-        a partir del `self.current_map_actions`.
+            """
+            Función para generar una solución "vecina" (neighbor)
+            a partir del `self.current_map_actions`.
 
-        Esto se hace tomando una copia de la solución actual y
-        modificando aleatoriamente la acción para una baldoza al azar.
-        """
-        neighbor_map_actions = list(self.current_map_actions) # Copia de la solución actual
+            Esto se hace tomando una copia de la solución actual y
+            modificando aleatoriamente la acción para varias baldozas al azar.
+            """
+            neighbor_map_actions = list(self.current_map_actions) # Copia de la solución actual
 
-        # Selecciona un índice de baldoza aleatorio para modificar
-        # Asegúrate de que el índice esté dentro del rango de MAX_BALDOZA_INDEX
-        baldoza_to_change_idx = random.randint(0, MAX_BALDOZA_INDEX - 1)
+            # --- CAMBIO AQUI: Mutar un número aleatorio de acciones ---
+            # Decide cuántas acciones mutar en esta iteración.
+            # Por ejemplo, entre 1 y 5 acciones. Puedes ajustar este rango.
+            num_mutations = random.randint(1, 5) # Mutar entre 1 y 5 puntos al azar
 
-        # Selecciona una nueva acción aleatoria para esa baldoza
-        new_action_idx = random.randint(0, self.num_possible_actions - 1)
+            for _ in range(num_mutations):
+                # Selecciona un índice de baldoza aleatorio para modificar
+                # Asegúrate de que el índice esté dentro del rango de MAX_BALDOZA_INDEX
+                baldoza_to_change_idx = random.randint(0, MAX_BALDOZA_INDEX - 1)
 
-        # Aplica el cambio
-        neighbor_map_actions[baldoza_to_change_idx] = new_action_idx
+                # Selecciona una nueva acción aleatoria para esa baldoza
+                new_action_idx = random.randint(0, self.num_possible_actions - 1)
 
-        return neighbor_map_actions
+                # Aplica el cambio
+                neighbor_map_actions[baldoza_to_change_idx] = new_action_idx
+            # --- FIN DEL CAMBIO ---
+
+            return neighbor_map_actions
 
     def make_results(self, map_actions):
         """
