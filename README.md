@@ -47,10 +47,10 @@ Línea de comando para ejecutar el programa:
 
 - `python main.py --n_frames 10000 --n_training_steps 50000 --initial_temperature 2000.0 --cooling_rate 0.99 --min_temperature 1e-14`
 
-n_training_steps: Número máximo de iteraciones que realizará el algoritmo.
-initial_temperature: Temperatura inicial del sistema al comienzo del proceso de Simulated Annealing.
-cooling_rate: Tasa a la que la temperatura disminuye con cada iteración del algoritmo.
-min_temperature: Establece la temperatura mínima por debajo de la cual el algoritmo se detendrá.
+- n_training_steps: Número máximo de iteraciones que realizará el algoritmo.
+- initial_temperature: Temperatura inicial del sistema al comienzo del proceso de Simulated Annealing.
+- cooling_rate: Tasa a la que la temperatura disminuye con cada iteración del algoritmo.
+- min_temperature: Establece la temperatura mínima por debajo de la cual el algoritmo se detendrá.
 
 ## Evaluación del agente:
 
