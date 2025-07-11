@@ -11,7 +11,7 @@ from mario_gym import run_simulation
 from pixel2cell import conversion_pixel_baldoza
 from constants import MAX_BALDOZA_INDEX # ¡Nueva importación!
 
-# --- PARÁMETROS DE RECOCIDO SIMULADO (AJUSTAR SEGÚN NECESIDAD) ---
+# --- PARÁMETROS DE SIMULATED ANNEALING (AJUSTAR SEGÚN NECESIDAD) ---
 # Si no usas self.args, puedes definirlos aquí directamente o pasarlos al constructor
 DEFAULT_INITIAL_TEMPERATURE = 1000.0  # Temperatura inicial alta para exploración
 DEFAULT_COOLING_RATE = 0.99           # Tasa de enfriamiento (ej. 0.99 para enfriamiento geométrico)
