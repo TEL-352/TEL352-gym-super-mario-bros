@@ -32,11 +32,8 @@ El repositorio consta de los siguientes archivos
 - `requirements.txt`: Contiene las librerías que debe instalar en su entorno de python 3.8 para poder ejecutar el framework.
 - `setup.py`: Contiene la configuración de hiper-parámetros necesarios para la ejecución del programa, como el número de steps a realizar en cada etapa, entre otros (modificar a conveniencia)
 
----
-
-**_(EDITAR SI CREA ARCHIVOS)_** Archivos creados para la solución implementada:
-
-- `archivo1`: descripción archivo1 
+ARCHIVOS CREADOS - Archivos creados para la solución implementada:
+- `constants.py`: Archivo intermedio para relacionar variables entre archivos.
 
 ## Ejecución del programa:
 
@@ -48,7 +45,12 @@ El programa se debe ejecutar por medio del archivo `main.py`, para lo cual se pu
 
 Línea de comando para ejecutar el programa:
 
-- `python main.py --n_frames 10000 --n_training_steps 100`
+- `python main.py --n_frames 10000 --n_training_steps 50000 --initial_temperature 2000.0 --cooling_rate 0.99 --min_temperature 1e-14`
+
+n_training_steps: Número máximo de iteraciones que realizará el algoritmo.
+initial_temperature: Temperatura inicial del sistema al comienzo del proceso de Simulated Annealing.
+cooling_rate: Tasa a la que la temperatura disminuye con cada iteración del algoritmo.
+min_temperature: Establece la temperatura mínima por debajo de la cual el algoritmo se detendrá.
 
 ## Evaluación del agente:
 
