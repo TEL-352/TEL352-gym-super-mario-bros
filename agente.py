@@ -99,26 +99,18 @@ class SuperMarioAgenteTEL:
         )
 
     def make_next_actions(self):
-        """
-        Función para generar la lista de acciones a utilizar en la iteración actual
-
-        Esta (o estas) acción se debe generar como resultado de la implementación
-        de la heurística que se le asignó a cada estudiante
-
-        La (o las) lista de acciones generada debe cumplir con lo siguiente:
-            Estructura que tiene como índice el número de la baldoza
-            y como valor para esa baldoza almacenar el índice de la acción a realizar
-            El número de la baldoza se obtiene según su implementación de pixel2cell.py
-            El índice de la acción se obtiene según su implementación de acciones.py
-        """
-
-        map_actions = [
-            0,
-            0,
-            1,
-        ]
-
+    
+        map_actions = {}
+        for baldoza in range(60):  
+            if baldoza in [0, 1, 2]:  
+                map_actions[baldoza] = 4 
+            elif baldoza % 4 == 0:
+                map_actions[baldoza] = 4  
+            else:
+                map_actions[baldoza] = 2  
         return map_actions
+
+
 
     def make_results(self, map_actions):
         """
@@ -175,33 +167,25 @@ class SuperMarioAgenteTEL:
         la mejor solución (o las mejores) soluciones encontradas
         """
         results_eval = self.eval_actions(results)
+        
+        if results_eval > self.eval_actions(self.best_map_actions_results):
+            self.best_map_actions = map_actions.copy()  # importante: copiar bien
+            self.best_map_actions_results = results
 
         if results_eval == 0:
             self.best_map_actions = map_actions
             self.best_map_actions_results = results
 
     def eval_actions(self, results):
-        """
-        En esta función debe definir su función de evaluación para su agente
-        La entrada corresponde al diccionario de resultados obtenido con make_results
-        """
-        # Placeholder, cambiar por su implementación de eval
-        # Puede ser útil revisar el status y la x_pos (o baldoza) alcanzada por Mario
-        # Por ejemplo, los status "dead" o "error" combinados con la x_pos alcanzada
-        # nos pueden dar un indicador de que tan cerca de la meta quedó Mario
-        # También se puede combinar con el tiempo restante,
-        # todo dependerá de la función objetivo y del criterio de evaluación que definan
+        if results["status"] in ["error", "dead"]:
+            return -1
+        return results["x_pos"]  # mientras más avanza, mejor
 
-        return 0
 
     def criterio_de_termino(self):
-        """
-        En esta función debe definir su criterio de término.
 
-        Sientase en libertad de agregar todos los parámetros y las salidas que necesite 
-        """
+        return len(self.historic_results) >= 10 or self.best_map_actions_results["flag_get"]
 
-        return True
 
     def train(self):
         """
