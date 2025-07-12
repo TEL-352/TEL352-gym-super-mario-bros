@@ -2,14 +2,9 @@ from deap import base, creator, tools
 import random
 
 def run_genetic_algorithm(agente, n_baldozas=200, pop_size=10, ngen=5):
-    """
-    Ejecuta un algoritmo genético usando DEAP para encontrar la mejor lista de acciones por baldoza.
-    Cada individuo es una lista de índices (acciones permitidas por agente.actions).
-    """
 
     n_acciones = len(agente.actions)
 
-    # Crear tipos de individuo y fitness
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMax)
 
@@ -21,8 +16,6 @@ def run_genetic_algorithm(agente, n_baldozas=200, pop_size=10, ngen=5):
     def eval_individual(individual):
         # Ejecuta simulación y obtiene puntaje (e.g., x_pos)
         results = agente.make_results(individual)
-
-        # Evaluación básica: usar x_pos (distancia horizontal recorrida)
         score = results["x_pos"]
 
         # Penaliza si muere o hay error
@@ -38,10 +31,10 @@ def run_genetic_algorithm(agente, n_baldozas=200, pop_size=10, ngen=5):
     toolbox.register("mutate", tools.mutUniformInt, low=0, up=n_acciones - 1, indpb=0.05)
     toolbox.register("select", tools.selTournament, tournsize=3)
 
-    # Iniciar población
+
     pop = toolbox.population(n=pop_size)
 
-    # Evolución
+    #evolucion
     for gen in range(ngen):
         offspring = toolbox.select(pop, len(pop))
         offspring = list(map(toolbox.clone, offspring))
